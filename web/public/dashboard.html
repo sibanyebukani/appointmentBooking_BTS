@@ -826,34 +826,33 @@
 
     // Load active sessions
     async function loadSessions() {
-      // For now, show mock data
-      // In production, fetch from API: /v1/security/user/:userId/sessions
-      const sessions = [
-        {
-          id: '1',
-          device: 'Chrome on Windows',
-          location: 'New York, USA',
-          ipAddress: '192.168.1.1',
-          lastActive: 'Active now',
-          current: true
-        },
-        {
-          id: '2',
-          device: 'Safari on iPhone',
-          location: 'New York, USA',
-          ipAddress: '192.168.1.50',
-          lastActive: '2 hours ago',
-          current: false
-        }
-      ];
+      try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${API_URL}/auth/sessions`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      const sessionsList = document.getElementById('sessionsList');
-      const count = sessions.length;
+        if (!response.ok) throw new Error('Failed to load sessions');
 
-      document.getElementById('sessionCount').textContent = count;
-      document.getElementById('activeSessionsCount').textContent = count;
+        const data = await response.json();
+        const sessions = (data.data || []).map(s => ({
+          id: s.id,
+          device: parseDevice(s.userAgent),
+          location: '—',
+          ipAddress: s.ipAddress || 'unknown',
+          lastActive: s.current ? 'Active now' : formatRelativeTime(s.createdAt),
+          current: !!s.current
+        }));
 
-      sessionsList.innerHTML = sessions.map(session => `
+        const sessionsList = document.getElementById('sessionsList');
+        const count = sessions.length;
+
+        document.getElementById('sessionCount').textContent = count;
+        document.getElementById('activeSessionsCount').textContent = count;
+
+        sessionsList.innerHTML = sessions.map(session => `
         <div class="p-6 hover:bg-gray-50 transition-colors">
           <div class="flex items-start justify-between">
             <div class="flex items-start gap-4">
@@ -880,6 +879,32 @@
           </div>
         </div>
       `).join('');
+      } catch (error) {
+        console.error('Failed to load sessions', error);
+      }
+    }
+
+    function parseDevice(userAgent) {
+      if (!userAgent) return 'Unknown Device';
+      if (userAgent.includes('iPhone')) return 'Safari on iPhone';
+      if (userAgent.includes('Android')) return 'Chrome on Android';
+      if (userAgent.includes('Macintosh')) return 'Safari on macOS';
+      if (userAgent.includes('Windows')) return 'Chrome on Windows';
+      return userAgent;
+    }
+
+    function formatRelativeTime(dateStr) {
+      try {
+        const d = new Date(dateStr);
+        const diffMs = Date.now() - d.getTime();
+        const mins = Math.floor(diffMs / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return `${mins} min ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs} hour${hrs===1?'':'s'} ago`;
+        const days = Math.floor(hrs / 24);
+        return `${days} day${days===1?'':'s'} ago`;
+      } catch { return '—'; }
     }
 
     // Load security notifications
@@ -1084,7 +1109,7 @@
       showLoading();
       try {
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/auth/logout-all`, {
+        const response = await fetch(`${API_URL}/auth/sessions/logout-others`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -1108,14 +1133,23 @@
       if (!confirm('Are you sure you want to revoke this session?')) return;
 
       showLoading();
-      // In production: Call API to revoke session
-      // await fetch(`${API_URL}/auth/sessions/${sessionId}`, { method: 'DELETE' });
-
-      setTimeout(() => {
-        hideLoading();
+      try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${API_URL}/auth/sessions/${sessionId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to revoke session');
         showToast('Session revoked successfully', 'success');
-        loadSessions();
-      }, 500);
+        await loadSessions();
+      } catch (error) {
+        console.error('Revoke session error', error);
+        showToast('Failed to revoke session', 'error');
+      } finally {
+        hideLoading();
+      }
     }
 
     // Settings Management Functions

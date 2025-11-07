@@ -38,6 +38,9 @@ import {
   findValidRefreshToken,
   revokeRefreshToken,
   revokeAllUserRefreshTokens,
+  getUserActiveRefreshTokens,
+  revokeRefreshTokenByIdForUser,
+  revokeAllUserRefreshTokensExcept,
   rotateRefreshToken,
 } from '../repos/refreshTokenRepo';
 import {
@@ -62,6 +65,35 @@ import {
 } from '../middleware/rateLimit';
 
 const router = Router();
+
+/**
+ * Auth middleware for this router (similar to profile's requireAuth)
+ */
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  try {
+    const token = extractTokenFromHeader(req.headers.authorization);
+    if (!token) {
+      const err = new Error('Authentication required') as Error & { status?: number };
+      err.status = 401;
+      throw err;
+    }
+
+    const currentIp = getClientIP(req);
+    const currentUserAgent = getUserAgent(req);
+    const verification = verifyAccessTokenWithContext(token, currentIp, currentUserAgent);
+
+    if (!verification.valid || !verification.payload) {
+      const err = new Error('Invalid or expired token') as Error & { status?: number };
+      err.status = 401;
+      throw err;
+    }
+
+    (req as any).user = verification.payload;
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
 
 /**
  * POST /v1/auth/register
@@ -740,6 +772,71 @@ router.post('/logout-all', async (req: Request, res: Response, next: NextFunctio
       success: true,
       message: 'Logged out from all devices successfully',
     });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * GET /v1/auth/sessions
+ * List active sessions (refresh tokens) for current user
+ */
+router.get('/sessions', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.userId as string;
+    const currentIp = getClientIP(req);
+    const currentUserAgent = getUserAgent(req);
+
+    const tokens = await getUserActiveRefreshTokens(userId);
+
+    const sessions = tokens.map(t => ({
+      id: t.id,
+      ipAddress: t.ipAddress,
+      userAgent: t.userAgent,
+      createdAt: t.createdAt,
+      expiresAt: t.expiresAt,
+      current: t.ipAddress === currentIp && t.userAgent === currentUserAgent,
+    }));
+
+    res.json({ success: true, data: sessions });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * DELETE /v1/auth/sessions/:id
+ * Revoke a specific session for the current user
+ */
+router.delete('/sessions/:id', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.userId as string;
+    const { id } = req.params;
+
+    const revoked = await revokeRefreshTokenByIdForUser(id, userId);
+    if (!revoked) {
+      return res.status(404).json({ success: false, error: 'Session not found' });
+    }
+
+    res.json({ success: true, message: 'Session revoked' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * POST /v1/auth/sessions/logout-others
+ * Revoke all other sessions except current device (match by IP + User-Agent)
+ */
+router.post('/sessions/logout-others', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user.userId as string;
+    const currentIp = getClientIP(req);
+    const currentUserAgent = getUserAgent(req);
+
+    const count = await revokeAllUserRefreshTokensExcept(userId, currentIp, currentUserAgent);
+
+    res.json({ success: true, message: 'Logged out of other devices', revoked: count });
   } catch (e) {
     next(e);
   }

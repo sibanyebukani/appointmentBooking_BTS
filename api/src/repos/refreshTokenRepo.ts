@@ -155,3 +155,57 @@ export async function rotateRefreshToken(
 
   return newRefreshToken;
 }
+
+/**
+ * Revoke a specific refresh token by document ID for a given user
+ */
+export async function revokeRefreshTokenByIdForUser(tokenId: string, userId: string): Promise<boolean> {
+  const collection = getCollection<RefreshTokenDoc>('refreshTokens');
+  const _id = new ObjectId(tokenId);
+
+  const result = await collection.updateOne(
+    { _id, userId, revoked: false },
+    {
+      $set: {
+        revoked: true,
+        revokedAt: new Date(),
+      },
+    }
+  );
+
+  return result.modifiedCount > 0;
+}
+
+/**
+ * Revoke all refresh tokens for a user except those matching current context (IP + User-Agent)
+ * If ipAddress or userAgent are missing, revokes all tokens for safety except none.
+ */
+export async function revokeAllUserRefreshTokensExcept(
+  userId: string,
+  ipAddress?: string,
+  userAgent?: string
+): Promise<number> {
+  const collection = getCollection<RefreshTokenDoc>('refreshTokens');
+
+  const filter: any = {
+    userId,
+    revoked: false,
+    expiresAt: { $gt: new Date() },
+  };
+
+  if (ipAddress && userAgent) {
+    // Exclude current device/session by IP+UA match
+    filter.$nor = [
+      { ipAddress: ipAddress, userAgent: userAgent },
+    ];
+  }
+
+  const result = await collection.updateMany(filter, {
+    $set: {
+      revoked: true,
+      revokedAt: new Date(),
+    },
+  });
+
+  return result.modifiedCount;
+}
