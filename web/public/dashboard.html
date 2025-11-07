@@ -1,0 +1,1717 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="BookIt Dashboard - Manage your appointments and account">
+  <meta name="theme-color" content="#3B82F6">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+
+  <title>Dashboard - BookIt Appointment System</title>
+
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @keyframes slideInRight {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .toast { animation: slideInRight 0.3s ease-out; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    .pulse-slow { animation: pulse 3s ease-in-out infinite; }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinner { animation: spin 1s linear infinite; }
+
+    /* Sidebar transition */
+    .sidebar-enter {
+      transform: translateX(-100%);
+      transition: transform 0.3s ease-out;
+    }
+    .sidebar-enter-active {
+      transform: translateX(0);
+    }
+
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2" role="alert" aria-live="assertive"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 shadow-xl flex items-center gap-4">
+      <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full spinner"></div>
+      <span class="text-gray-700 font-medium">Loading...</span>
+    </div>
+  </div>
+
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <!-- Logo & Brand -->
+      <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <div>
+            <h1 class="text-xl font-bold text-gray-800">BookIt</h1>
+            <p class="text-xs text-gray-500">Appointment System</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 p-4 overflow-y-auto custom-scrollbar">
+        <div class="space-y-1">
+          <a href="#" data-section="overview" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-white bg-blue-500 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            <span>Overview</span>
+          </a>
+
+          <a href="#" data-section="appointments" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span>Appointments</span>
+          </a>
+
+          <a href="#" data-section="sessions" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            <span>Active Sessions</span>
+            <span id="sessionCount" class="ml-auto px-2 py-0.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-full">0</span>
+          </a>
+
+          <a href="#" data-section="security" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+            </svg>
+            <span>Security</span>
+            <span id="securityAlertCount" class="hidden ml-auto px-2 py-0.5 text-xs font-semibold text-red-600 bg-red-100 rounded-full pulse-slow">!</span>
+          </a>
+
+          <a href="#" data-section="activity" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>Activity Timeline</span>
+          </a>
+
+          <a href="#" data-section="settings" class="nav-link flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            <span>Settings</span>
+          </a>
+        </div>
+
+        <!-- User Info -->
+        <div class="mt-8 pt-4 border-t border-gray-200">
+          <div class="px-4 py-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                <span id="userInitials">U</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p id="userName" class="text-sm font-medium text-gray-800 truncate">Loading...</p>
+                <p id="userEmail" class="text-xs text-gray-500 truncate">Loading...</p>
+              </div>
+            </div>
+            <button onclick="logout()" class="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              </svg>
+              Logout
+            </button>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar">
+      <!-- Header -->
+      <header class="bg-white border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 id="pageTitle" class="text-2xl font-bold text-gray-800">Dashboard Overview</h2>
+            <p id="pageSubtitle" class="text-sm text-gray-500 mt-1">Welcome back! Here's what's happening today.</p>
+          </div>
+          <div class="flex items-center gap-4">
+            <!-- Security Status Badge -->
+            <div class="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+              <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-sm font-medium text-green-800">Secure</span>
+            </div>
+
+            <!-- Notifications -->
+            <button class="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+              </svg>
+              <span id="notificationBadge" class="hidden absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Content Area -->
+      <div class="p-8">
+        <!-- Overview Section -->
+        <div id="overviewSection" class="section-content fade-in">
+          <!-- Stats Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Appointments -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-500">Total Appointments</p>
+                  <p class="text-3xl font-bold text-gray-800 mt-2">24</p>
+                  <p class="text-xs text-green-600 mt-2">↑ 12% from last month</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-500">Active Sessions</p>
+                  <p id="activeSessionsCount" class="text-3xl font-bold text-gray-800 mt-2">0</p>
+                  <p class="text-xs text-gray-500 mt-2">Devices logged in</p>
+                </div>
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Score -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-500">Security Score</p>
+                  <p class="text-3xl font-bold text-gray-800 mt-2">95%</p>
+                  <p class="text-xs text-green-600 mt-2">Excellent</p>
+                </div>
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Last Activity -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-500">Last Activity</p>
+                  <p id="lastActivityTime" class="text-3xl font-bold text-gray-800 mt-2">Now</p>
+                  <p class="text-xs text-gray-500 mt-2">Current session</p>
+                </div>
+                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Recent Activity -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+              <div class="space-y-3">
+                <button class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-300 rounded-lg transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                  </svg>
+                  <span>Create New Appointment</span>
+                </button>
+                <button class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-700 border border-gray-200 hover:border-purple-300 rounded-lg transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                  </svg>
+                  <span>Manage Clients</span>
+                </button>
+                <button class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-green-50 hover:text-green-700 border border-gray-200 hover:border-green-300 rounded-lg transition-colors">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                  </svg>
+                  <span>View Reports</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Security Notifications Preview -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Security Notifications</h3>
+                <a href="#" data-section="security" class="text-sm text-blue-600 hover:text-blue-700 font-medium">View All</a>
+              </div>
+              <div id="securityNotificationsPreview" class="space-y-3">
+                <!-- Will be populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sessions Section -->
+        <div id="sessionsSection" class="section-content hidden">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">Active Sessions</h3>
+                  <p class="text-sm text-gray-500 mt-1">Manage devices where you're currently logged in</p>
+                </div>
+                <button onclick="logoutAllDevices()" class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-lg transition-colors">
+                  Logout All Devices
+                </button>
+              </div>
+            </div>
+            <div id="sessionsList" class="divide-y divide-gray-200">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Section -->
+        <div id="securitySection" class="section-content hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Security Score Card -->
+            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold">Security Score</h3>
+                <svg class="w-8 h-8 opacity-75" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+              <div class="text-5xl font-bold mb-2">95%</div>
+              <p class="text-green-100">Excellent security posture</p>
+            </div>
+
+            <!-- Email Verification -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-800">Email</h4>
+                  <p class="text-xs text-green-600 font-medium">Verified</p>
+                </div>
+              </div>
+              <p class="text-sm text-gray-600">Your email is verified and secure</p>
+            </div>
+
+            <!-- 2FA Status -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="font-semibold text-gray-800">Two-Factor Auth</h4>
+                  <p class="text-xs text-orange-600 font-medium">Not Enabled</p>
+                </div>
+              </div>
+              <button class="text-sm text-blue-600 hover:text-blue-700 font-medium">Enable 2FA →</button>
+            </div>
+          </div>
+
+          <!-- Security Notifications -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+              <h3 class="text-lg font-semibold text-gray-800">Security Notifications</h3>
+              <p class="text-sm text-gray-500 mt-1">Recent security events and alerts</p>
+            </div>
+            <div id="securityNotificationsList" class="divide-y divide-gray-200">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Timeline Section -->
+        <div id="activitySection" class="section-content hidden">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">Activity Timeline</h3>
+                  <p class="text-sm text-gray-500 mt-1">Your recent account activity and login history</p>
+                </div>
+                <select class="px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option>Last 7 days</option>
+                  <option>Last 30 days</option>
+                  <option>Last 90 days</option>
+                  <option>All time</option>
+                </select>
+              </div>
+            </div>
+            <div id="activityTimeline" class="p-6">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settingsSection" class="section-content hidden">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            
+            <!-- Profile Information -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">Profile Information</h3>
+                <button onclick="toggleEditProfile()" id="editProfileBtn" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Edit</button>
+              </div>
+              
+              <form id="profileForm" class="space-y-4">
+                <!-- Avatar Section -->
+                <div class="flex items-center space-x-4 mb-6">
+                  <div class="relative">
+                    <img id="profileAvatar" src="" alt="Profile" class="w-20 h-20 rounded-full object-cover bg-gray-200 hidden">
+                    <div id="profileAvatarPlaceholder" class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span id="profileAvatarInitials" class="text-2xl font-semibold text-blue-600">JD</span>
+                    </div>
+                    <button type="button" onclick="uploadAvatar()" class="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-1.5 shadow-sm">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <div>
+                    <h4 class="font-medium text-gray-900">Profile Photo</h4>
+                    <p class="text-sm text-gray-500">Update your profile picture</p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <input type="text" id="settingsFullName" class="profile-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="John Doe" disabled>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="settingsEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500" disabled readonly>
+                    <p class="text-xs text-gray-500 mt-1">Email cannot be changed. Contact support if needed.</p>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input type="tel" id="settingsPhoneNumber" class="profile-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="+1 (555) 123-4567" disabled>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
+                    <select id="settingsTimezone" class="profile-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                      <option value="">Select timezone</option>
+                      <option value="America/New_York">Eastern Time (ET)</option>
+                      <option value="America/Chicago">Central Time (CT)</option>
+                      <option value="America/Denver">Mountain Time (MT)</option>
+                      <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <textarea id="settingsBio" class="profile-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Tell us about yourself..." maxlength="500" disabled></textarea>
+                  <p class="text-xs text-gray-500 mt-1">Maximum 500 characters</p>
+                </div>
+
+                <div id="profileFormActions" class="flex gap-3 mt-6 hidden">
+                  <button type="button" onclick="saveProfile()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Save Changes
+                  </button>
+                  <button type="button" onclick="cancelEditProfile()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Business Information -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-semibold text-gray-800">Business Information</h3>
+                <button onclick="toggleEditBusiness()" id="editBusinessBtn" class="text-sm text-blue-600 hover:text-blue-700 font-medium">Edit</button>
+              </div>
+              
+              <form id="businessForm" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
+                  <input type="text" id="settingsBusinessName" class="business-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Your Business Name" disabled>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Business Type</label>
+                  <select id="settingsBusinessType" class="business-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                    <option value="">Select business type</option>
+                    <option value="barbershop">Barbershop</option>
+                    <option value="salon">Hair Salon</option>
+                    <option value="spa">Spa & Wellness</option>
+                    <option value="clinic">Medical Clinic</option>
+                    <option value="dental">Dental Practice</option>
+                    <option value="mechanic">Auto Repair</option>
+                    <option value="tutor">Tutoring Service</option>
+                    <option value="consultant">Consulting</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Business Phone</label>
+                  <input type="tel" id="settingsBusinessPhone" class="business-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="+1 (555) 123-4567" disabled>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Business Address</label>
+                  <textarea id="settingsBusinessAddress" class="business-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="123 Main St, City, State 12345" disabled></textarea>
+                </div>
+
+                <div id="businessFormActions" class="flex gap-3 mt-6 hidden">
+                  <button type="button" onclick="saveBusiness()" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Save Changes
+                  </button>
+                  <button type="button" onclick="cancelEditBusiness()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Notification Preferences -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-6">Notification Preferences</h3>
+              
+              <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Email Notifications</p>
+                    <p class="text-xs text-gray-500 mt-1">Receive appointment reminders and updates</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="emailNotifications" class="sr-only peer" onchange="updateNotificationPreference('emailNotifications', this.checked)">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">SMS Notifications</p>
+                    <p class="text-xs text-gray-500 mt-1">Get text messages for important updates</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="smsNotifications" class="sr-only peer" onchange="updateNotificationPreference('smsNotifications', this.checked)">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Push Notifications</p>
+                    <p class="text-xs text-gray-500 mt-1">Browser notifications for instant alerts</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="pushNotifications" class="sr-only peer" onchange="updateNotificationPreference('pushNotifications', this.checked)">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Marketing Emails</p>
+                    <p class="text-xs text-gray-500 mt-1">Product updates and promotional content</p>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="marketingEmails" class="sr-only peer" onchange="updateNotificationPreference('marketingEmails', this.checked)">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-6">Security Settings</h3>
+              
+              <div class="space-y-4">
+                <!-- Change Password -->
+                <button onclick="showChangePasswordModal()" class="w-full flex items-center justify-between px-4 py-3 text-left border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-lg transition-colors">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Change Password</p>
+                      <p class="text-xs text-gray-500">Update your password regularly for security</p>
+                    </div>
+                  </div>
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </button>
+
+                <!-- Phone Verification -->
+                <button onclick="showPhoneVerificationModal()" class="w-full flex items-center justify-between px-4 py-3 text-left border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-lg transition-colors">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-800">Verify Phone Number</p>
+                      <p class="text-xs text-gray-500">Add phone verification for extra security</p>
+                    </div>
+                  </div>
+                  <span id="phoneVerificationBadge" class="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">Unverified</span>
+                </button>
+
+                <!-- Account Deletion -->
+                <button onclick="showDeleteAccountModal()" class="w-full flex items-center justify-between px-4 py-3 text-left border border-red-200 hover:border-red-300 hover:bg-red-50 rounded-lg transition-colors">
+                  <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                      <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-red-600">Delete Account</p>
+                      <p class="text-xs text-gray-500">Permanently delete your account and data</p>
+                    </div>
+                  </div>
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appointments Section (Placeholder) -->
+        <div id="appointmentsSection" class="section-content hidden">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Appointments</h3>
+            <p class="text-gray-600">Appointments management coming soon...</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:4000/v1';
+    let currentUser = null;
+    let refreshToken = null;
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+      };
+
+      const icons = {
+        success: '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>',
+        error: '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>',
+        warning: '<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>',
+        info: '<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>'
+      };
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${colors[type]} border rounded-lg shadow-lg p-4 flex items-start gap-3 min-w-72 max-w-md`;
+      toast.innerHTML = `
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+          ${icons[type]}
+        </svg>
+        <span class="text-sm font-medium flex-1">${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+      `;
+
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+    }
+
+    // Show loading overlay
+    function showLoading() {
+      document.getElementById('loadingOverlay').classList.remove('hidden');
+    }
+
+    // Hide loading overlay
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+
+    // Check authentication
+    async function checkAuth() {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      refreshToken = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken');
+
+      if (!token) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/auth/validate`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          // Try to refresh token
+          if (refreshToken) {
+            await refreshAccessToken();
+            return checkAuth();
+          }
+          throw new Error('Authentication failed');
+        }
+
+        const data = await response.json();
+        currentUser = data.data.user;
+        updateUserInfo();
+        loadDashboardData();
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login.html';
+      }
+    }
+
+    // Refresh access token
+    async function refreshAccessToken() {
+      try {
+        const response = await fetch(`${API_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refreshToken })
+        });
+
+        if (!response.ok) throw new Error('Token refresh failed');
+
+        const data = await response.json();
+        localStorage.setItem('token', data.data.token);
+        localStorage.setItem('refreshToken', data.data.refreshToken);
+        refreshToken = data.data.refreshToken;
+      } catch (error) {
+        console.error('Token refresh failed:', error);
+        throw error;
+      }
+    }
+
+    // Update user info in sidebar
+    function updateUserInfo() {
+      if (!currentUser) return;
+
+      const initials = currentUser.fullName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+
+      document.getElementById('userInitials').textContent = initials;
+      document.getElementById('userName').textContent = currentUser.fullName;
+      document.getElementById('userEmail').textContent = currentUser.email;
+
+      // Settings page - Profile Information
+      document.getElementById('settingsFullName').value = currentUser.fullName || '';
+      document.getElementById('settingsEmail').value = currentUser.email || '';
+      document.getElementById('settingsPhoneNumber').value = currentUser.phoneNumber || '';
+      document.getElementById('settingsTimezone').value = currentUser.timezone || '';
+      document.getElementById('settingsBio').value = currentUser.bio || '';
+      
+      // Business Information
+      document.getElementById('settingsBusinessName').value = currentUser.businessName || '';
+      document.getElementById('settingsBusinessType').value = currentUser.businessType || '';
+      document.getElementById('settingsBusinessPhone').value = currentUser.businessPhone || '';
+      document.getElementById('settingsBusinessAddress').value = currentUser.businessAddress || '';
+      
+      // Notification preferences
+      document.getElementById('emailNotifications').checked = currentUser.emailNotifications !== false;
+      document.getElementById('smsNotifications').checked = currentUser.smsNotifications === true;
+      document.getElementById('pushNotifications').checked = currentUser.pushNotifications === true;
+      document.getElementById('marketingEmails').checked = currentUser.marketingEmails === true;
+      
+      // Avatar handling
+      updateProfileAvatar(currentUser);
+      
+      // Phone verification badge
+      updatePhoneVerificationBadge(currentUser.phoneVerified);
+    }
+
+    // Load dashboard data
+    async function loadDashboardData() {
+      await Promise.all([
+        loadSessions(),
+        loadSecurityNotifications(),
+        loadActivityTimeline()
+      ]);
+    }
+
+    // Load active sessions
+    async function loadSessions() {
+      // For now, show mock data
+      // In production, fetch from API: /v1/security/user/:userId/sessions
+      const sessions = [
+        {
+          id: '1',
+          device: 'Chrome on Windows',
+          location: 'New York, USA',
+          ipAddress: '192.168.1.1',
+          lastActive: 'Active now',
+          current: true
+        },
+        {
+          id: '2',
+          device: 'Safari on iPhone',
+          location: 'New York, USA',
+          ipAddress: '192.168.1.50',
+          lastActive: '2 hours ago',
+          current: false
+        }
+      ];
+
+      const sessionsList = document.getElementById('sessionsList');
+      const count = sessions.length;
+
+      document.getElementById('sessionCount').textContent = count;
+      document.getElementById('activeSessionsCount').textContent = count;
+
+      sessionsList.innerHTML = sessions.map(session => `
+        <div class="p-6 hover:bg-gray-50 transition-colors">
+          <div class="flex items-start justify-between">
+            <div class="flex items-start gap-4">
+              <div class="w-12 h-12 bg-${session.current ? 'blue' : 'gray'}-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-${session.current ? 'blue' : 'gray'}-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="font-semibold text-gray-800">${session.device}</h4>
+                  ${session.current ? '<span class="px-2 py-1 text-xs font-semibold text-blue-600 bg-blue-100 rounded-full">Current</span>' : ''}
+                </div>
+                <p class="text-sm text-gray-600 mt-1">${session.location}</p>
+                <p class="text-xs text-gray-500 mt-1">IP: ${session.ipAddress}</p>
+                <p class="text-xs text-gray-500">Last active: ${session.lastActive}</p>
+              </div>
+            </div>
+            ${!session.current ? `
+              <button onclick="revokeSession('${session.id}')" class="px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-lg transition-colors">
+                Revoke
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Load security notifications
+    function loadSecurityNotifications() {
+      const notifications = [
+        {
+          type: 'success',
+          title: 'Successful Login',
+          message: 'New login from Chrome on Windows',
+          time: '5 minutes ago',
+          icon: 'check'
+        },
+        {
+          type: 'info',
+          title: 'Email Verified',
+          message: 'Your email address was successfully verified',
+          time: '1 day ago',
+          icon: 'mail'
+        },
+        {
+          type: 'warning',
+          title: 'Password Changed',
+          message: 'Your password was recently updated',
+          time: '3 days ago',
+          icon: 'key'
+        }
+      ];
+
+      const colors = {
+        success: 'green',
+        info: 'blue',
+        warning: 'yellow',
+        error: 'red'
+      };
+
+      const icons = {
+        check: '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>',
+        mail: '<path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>',
+        key: '<path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"></path>',
+        shield: '<path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>'
+      };
+
+      // Update preview in overview
+      const previewContainer = document.getElementById('securityNotificationsPreview');
+      previewContainer.innerHTML = notifications.slice(0, 3).map(notif => `
+        <div class="flex items-start gap-3 p-3 bg-${colors[notif.type]}-50 border border-${colors[notif.type]}-200 rounded-lg">
+          <div class="w-8 h-8 bg-${colors[notif.type]}-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-${colors[notif.type]}-600" fill="currentColor" viewBox="0 0 20 20">
+              ${icons[notif.icon]}
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-gray-800">${notif.title}</p>
+            <p class="text-xs text-gray-600 mt-1">${notif.message}</p>
+            <p class="text-xs text-gray-500 mt-1">${notif.time}</p>
+          </div>
+        </div>
+      `).join('');
+
+      // Update full list in security section
+      const listContainer = document.getElementById('securityNotificationsList');
+      listContainer.innerHTML = notifications.map(notif => `
+        <div class="p-6 hover:bg-gray-50 transition-colors">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-${colors[notif.type]}-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-${colors[notif.type]}-600" fill="currentColor" viewBox="0 0 20 20">
+                ${icons[notif.icon]}
+              </svg>
+            </div>
+            <div class="flex-1">
+              <h4 class="font-semibold text-gray-800">${notif.title}</h4>
+              <p class="text-sm text-gray-600 mt-1">${notif.message}</p>
+              <p class="text-xs text-gray-500 mt-2">${notif.time}</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Load activity timeline
+    function loadActivityTimeline() {
+      const activities = [
+        { type: 'login', message: 'Logged in from Chrome on Windows', time: '5 minutes ago', location: 'New York, USA' },
+        { type: 'appointment', message: 'Created new appointment', time: '2 hours ago', location: 'New York, USA' },
+        { type: 'profile', message: 'Updated profile information', time: '1 day ago', location: 'New York, USA' },
+        { type: 'security', message: 'Changed password', time: '3 days ago', location: 'New York, USA' },
+        { type: 'login', message: 'Logged in from Safari on iPhone', time: '5 days ago', location: 'New York, USA' }
+      ];
+
+      const icons = {
+        login: '<path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"></path>',
+        appointment: '<path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"></path>',
+        profile: '<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>',
+        security: '<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>'
+      };
+
+      const container = document.getElementById('activityTimeline');
+      container.innerHTML = `
+        <div class="space-y-6">
+          ${activities.map((activity, index) => `
+            <div class="relative ${index !== activities.length - 1 ? 'pb-6' : ''}">
+              ${index !== activities.length - 1 ? '<div class="absolute left-5 top-10 bottom-0 w-0.5 bg-gray-200"></div>' : ''}
+              <div class="relative flex items-start gap-4">
+                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 relative z-10">
+                  <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    ${icons[activity.type]}
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-800">${activity.message}</p>
+                  <div class="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                    <span>${activity.time}</span>
+                    <span>•</span>
+                    <span>${activity.location}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Navigation
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const section = link.dataset.section;
+        showSection(section);
+
+        // Update active nav
+        document.querySelectorAll('.nav-link').forEach(l => {
+          l.classList.remove('bg-blue-500', 'text-white');
+          l.classList.add('text-gray-700', 'hover:bg-gray-100');
+        });
+        link.classList.add('bg-blue-500', 'text-white');
+        link.classList.remove('text-gray-700', 'hover:bg-gray-100');
+      });
+    });
+
+    function showSection(sectionName) {
+      // Hide all sections
+      document.querySelectorAll('.section-content').forEach(section => {
+        section.classList.add('hidden');
+      });
+
+      // Show selected section
+      const section = document.getElementById(`${sectionName}Section`);
+      if (section) {
+        section.classList.remove('hidden');
+        section.classList.add('fade-in');
+      }
+
+      // Update header
+      const titles = {
+        overview: { title: 'Dashboard Overview', subtitle: "Welcome back! Here's what's happening today." },
+        appointments: { title: 'Appointments', subtitle: 'Manage your upcoming appointments' },
+        sessions: { title: 'Active Sessions', subtitle: 'Manage devices where you\'re currently logged in' },
+        security: { title: 'Security Center', subtitle: 'Monitor and manage your account security' },
+        activity: { title: 'Activity Timeline', subtitle: 'Your recent account activity and login history' },
+        settings: { title: 'Settings', subtitle: 'Manage your account preferences' }
+      };
+
+      const info = titles[sectionName] || titles.overview;
+      document.getElementById('pageTitle').textContent = info.title;
+      document.getElementById('pageSubtitle').textContent = info.subtitle;
+    }
+
+    // Logout
+    async function logout() {
+      if (!confirm('Are you sure you want to logout?')) return;
+
+      showLoading();
+      try {
+        const token = localStorage.getItem('refreshToken');
+        if (token) {
+          await fetch(`${API_URL}/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ refreshToken: token })
+          });
+        }
+      } catch (error) {
+        console.error('Logout error:', error);
+      } finally {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('authToken');
+        sessionStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('user');
+        window.location.href = '/login.html';
+      }
+    }
+
+    // Logout all devices
+    async function logoutAllDevices() {
+      if (!confirm('This will logout all devices except this one. Are you sure?')) return;
+
+      showLoading();
+      try {
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+        const response = await fetch(`${API_URL}/auth/logout-all`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) throw new Error('Failed to logout all devices');
+
+        showToast('Successfully logged out from all other devices', 'success');
+        await loadSessions();
+      } catch (error) {
+        console.error('Logout all error:', error);
+        showToast('Failed to logout from all devices', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Revoke session
+    async function revokeSession(sessionId) {
+      if (!confirm('Are you sure you want to revoke this session?')) return;
+
+      showLoading();
+      // In production: Call API to revoke session
+      // await fetch(`${API_URL}/auth/sessions/${sessionId}`, { method: 'DELETE' });
+
+      setTimeout(() => {
+        hideLoading();
+        showToast('Session revoked successfully', 'success');
+        loadSessions();
+      }, 500);
+    }
+
+    // Settings Management Functions
+
+    // Update profile avatar display
+    function updateProfileAvatar(user) {
+      const avatar = document.getElementById('profileAvatar');
+      const placeholder = document.getElementById('profileAvatarPlaceholder');
+      const initials = document.getElementById('profileAvatarInitials');
+      
+      if (user.avatarUrl) {
+        avatar.src = user.avatarUrl;
+        avatar.classList.remove('hidden');
+        placeholder.classList.add('hidden');
+      } else {
+        const userInitials = user.fullName
+          .split(' ')
+          .map(name => name[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+        initials.textContent = userInitials;
+        avatar.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+      }
+    }
+
+    // Update phone verification badge
+    function updatePhoneVerificationBadge(verified) {
+      const badge = document.getElementById('phoneVerificationBadge');
+      if (verified) {
+        badge.textContent = 'Verified';
+        badge.className = 'text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full';
+      } else {
+        badge.textContent = 'Unverified';
+        badge.className = 'text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full';
+      }
+    }
+
+    // Profile editing functions
+    function toggleEditProfile() {
+      const inputs = document.querySelectorAll('.profile-input');
+      const editBtn = document.getElementById('editProfileBtn');
+      const actions = document.getElementById('profileFormActions');
+      
+      if (editBtn.textContent === 'Edit') {
+        inputs.forEach(input => input.disabled = false);
+        editBtn.textContent = 'Cancel';
+        actions.classList.remove('hidden');
+      } else {
+        cancelEditProfile();
+      }
+    }
+
+    function cancelEditProfile() {
+      const inputs = document.querySelectorAll('.profile-input');
+      const editBtn = document.getElementById('editProfileBtn');
+      const actions = document.getElementById('profileFormActions');
+      
+      inputs.forEach(input => input.disabled = true);
+      editBtn.textContent = 'Edit';
+      actions.classList.add('hidden');
+      
+      // Reset form to original values
+      updateUserInfo();
+    }
+
+    async function saveProfile() {
+      showLoading();
+      try {
+        const profileData = {
+          fullName: document.getElementById('settingsFullName').value.trim(),
+          phoneNumber: document.getElementById('settingsPhoneNumber').value.trim() || null,
+          timezone: document.getElementById('settingsTimezone').value || null,
+          bio: document.getElementById('settingsBio').value.trim() || null
+        };
+
+        const response = await fetch(`${API_URL}/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify(profileData)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to update profile');
+        }
+
+        const result = await response.json();
+        currentUser = result.data;
+        updateUserInfo();
+        
+        showToast('Profile updated successfully!', 'success');
+        cancelEditProfile();
+      } catch (error) {
+        console.error('Profile update error:', error);
+        showToast(error.message || 'Failed to update profile', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Business editing functions
+    function toggleEditBusiness() {
+      const inputs = document.querySelectorAll('.business-input');
+      const editBtn = document.getElementById('editBusinessBtn');
+      const actions = document.getElementById('businessFormActions');
+      
+      if (editBtn.textContent === 'Edit') {
+        inputs.forEach(input => input.disabled = false);
+        editBtn.textContent = 'Cancel';
+        actions.classList.remove('hidden');
+      } else {
+        cancelEditBusiness();
+      }
+    }
+
+    function cancelEditBusiness() {
+      const inputs = document.querySelectorAll('.business-input');
+      const editBtn = document.getElementById('editBusinessBtn');
+      const actions = document.getElementById('businessFormActions');
+      
+      inputs.forEach(input => input.disabled = true);
+      editBtn.textContent = 'Edit';
+      actions.classList.add('hidden');
+      
+      // Reset form to original values
+      updateUserInfo();
+    }
+
+    async function saveBusiness() {
+      showLoading();
+      try {
+        const businessData = {
+          businessName: document.getElementById('settingsBusinessName').value.trim() || null,
+          businessType: document.getElementById('settingsBusinessType').value || null,
+          businessPhone: document.getElementById('settingsBusinessPhone').value.trim() || null,
+          businessAddress: document.getElementById('settingsBusinessAddress').value.trim() || null
+        };
+
+        const response = await fetch(`${API_URL}/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify(businessData)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to update business information');
+        }
+
+        const result = await response.json();
+        currentUser = result.data;
+        updateUserInfo();
+        
+        showToast('Business information updated successfully!', 'success');
+        cancelEditBusiness();
+      } catch (error) {
+        console.error('Business update error:', error);
+        showToast(error.message || 'Failed to update business information', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Notification preference updates
+    async function updateNotificationPreference(preference, value) {
+      try {
+        const data = {};
+        data[preference] = value;
+
+        const response = await fetch(`${API_URL}/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to update notification preference');
+        }
+
+        const result = await response.json();
+        currentUser = result.data;
+        showToast(`${preference.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value ? 'enabled' : 'disabled'}`, 'success');
+      } catch (error) {
+        console.error('Notification preference update error:', error);
+        showToast('Failed to update notification preference', 'error');
+        // Revert checkbox state
+        document.getElementById(preference).checked = !value;
+      }
+    }
+
+    // Avatar upload (placeholder)
+    function uploadAvatar() {
+      showToast('Avatar upload feature coming soon!', 'info');
+    }
+
+    // Change Password Modal Functions
+    function showChangePasswordModal() {
+      document.getElementById('changePasswordModal').classList.remove('hidden');
+      resetChangePasswordForm();
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById('changePasswordModal').classList.add('hidden');
+      resetChangePasswordForm();
+    }
+
+    function resetChangePasswordForm() {
+      document.getElementById('changePasswordForm').reset();
+      resetPasswordValidation();
+      document.getElementById('changePasswordBtn').disabled = true;
+    }
+
+    function resetPasswordValidation() {
+      const strengthBar = document.getElementById('passwordStrengthBar');
+      const strengthText = document.getElementById('passwordStrengthText');
+      const matchMessage = document.getElementById('passwordMatchMessage');
+      
+      strengthBar.style.width = '0%';
+      strengthBar.className = 'h-2 rounded-full transition-all duration-300 bg-red-500';
+      strengthText.textContent = 'Weak';
+      strengthText.className = 'text-xs font-medium text-gray-500';
+      matchMessage.classList.add('hidden');
+      
+      // Reset requirement indicators
+      ['req-length', 'req-uppercase', 'req-lowercase', 'req-number', 'req-special'].forEach(id => {
+        const element = document.getElementById(id);
+        const indicator = element.querySelector('span');
+        indicator.className = 'w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs';
+        indicator.textContent = '•';
+        element.className = 'flex items-center space-x-2';
+      });
+    }
+
+    // Password visibility toggle
+    function togglePasswordVisibility(inputId) {
+      const input = document.getElementById(inputId);
+      const button = input.nextElementSibling;
+      const svg = button.querySelector('svg');
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L17.879 17.879"></path>';
+      } else {
+        input.type = 'password';
+        svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+      }
+    }
+
+    // Password strength validation
+    function validatePasswordStrength() {
+      const password = document.getElementById('newPassword').value;
+      const strengthBar = document.getElementById('passwordStrengthBar');
+      const strengthText = document.getElementById('passwordStrengthText');
+      
+      // Requirements
+      const requirements = {
+        length: password.length >= 12,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /\d/.test(password),
+        special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+      };
+      
+      // Update requirement indicators
+      Object.entries(requirements).forEach(([key, met]) => {
+        const element = document.getElementById(`req-${key}`);
+        const indicator = element.querySelector('span');
+        
+        if (met) {
+          indicator.className = 'w-4 h-4 rounded-full bg-green-500 flex items-center justify-center text-white text-xs';
+          indicator.innerHTML = '✓';
+          element.className = 'flex items-center space-x-2 text-green-600';
+        } else {
+          indicator.className = 'w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs';
+          indicator.textContent = '•';
+          element.className = 'flex items-center space-x-2 text-gray-500';
+        }
+      });
+      
+      // Calculate strength
+      const score = Object.values(requirements).filter(Boolean).length;
+      let width = 0;
+      let color = 'bg-red-500';
+      let text = 'Weak';
+      let textColor = 'text-red-600';
+      
+      if (score === 0) {
+        width = 0;
+      } else if (score <= 2) {
+        width = 20;
+        color = 'bg-red-500';
+        text = 'Weak';
+        textColor = 'text-red-600';
+      } else if (score === 3) {
+        width = 40;
+        color = 'bg-orange-500';
+        text = 'Fair';
+        textColor = 'text-orange-600';
+      } else if (score === 4) {
+        width = 70;
+        color = 'bg-yellow-500';
+        text = 'Good';
+        textColor = 'text-yellow-600';
+      } else {
+        width = 100;
+        color = 'bg-green-500';
+        text = 'Strong';
+        textColor = 'text-green-600';
+      }
+      
+      strengthBar.style.width = width + '%';
+      strengthBar.className = `h-2 rounded-full transition-all duration-300 ${color}`;
+      strengthText.textContent = text;
+      strengthText.className = `text-xs font-medium ${textColor}`;
+      
+      return score >= 4; // Require at least 4 criteria
+    }
+
+    // Password match validation
+    function validatePasswordMatch() {
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const matchMessage = document.getElementById('passwordMatchMessage');
+      const confirmInput = document.getElementById('confirmPassword');
+      
+      if (confirmPassword && newPassword !== confirmPassword) {
+        matchMessage.classList.remove('hidden');
+        confirmInput.classList.add('border-red-500');
+        confirmInput.classList.remove('border-gray-300');
+        return false;
+      } else if (confirmPassword) {
+        matchMessage.classList.add('hidden');
+        confirmInput.classList.remove('border-red-500');
+        confirmInput.classList.add('border-green-500');
+        return newPassword === confirmPassword;
+      } else {
+        matchMessage.classList.add('hidden');
+        confirmInput.classList.remove('border-red-500', 'border-green-500');
+        confirmInput.classList.add('border-gray-300');
+        return false;
+      }
+    }
+
+    // Update submit button state
+    function updateSubmitButtonState() {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const submitBtn = document.getElementById('changePasswordBtn');
+      
+      // Get validation results without calling functions that call this function
+      const password = document.getElementById('newPassword').value;
+      const requirements = {
+        length: password.length >= 12,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /\d/.test(password),
+        special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+      };
+      const score = Object.values(requirements).filter(Boolean).length;
+      const isPasswordStrong = score >= 4;
+      
+      const isPasswordMatch = newPassword === confirmPassword;
+      const allFilled = currentPassword && newPassword && confirmPassword;
+      
+      submitBtn.disabled = !(allFilled && isPasswordStrong && isPasswordMatch);
+    }
+
+    // Handle form submission
+    async function handleChangePasswordSubmit(e) {
+      e.preventDefault();
+      
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      
+      // Final validation
+      if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'error');
+        return;
+      }
+      
+      if (!validatePasswordStrength()) {
+        showToast('Password does not meet strength requirements', 'error');
+        return;
+      }
+      
+      showLoading();
+      
+      try {
+        const response = await fetch(`${API_URL}/profile/change-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword
+          })
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || 'Failed to change password');
+        }
+        
+        showToast('Password changed successfully!', 'success');
+        closeChangePasswordModal();
+        
+        // Optional: Force re-login for security
+        if (confirm('Password changed successfully! Would you like to log out and log back in for security?')) {
+          logout();
+        }
+        
+      } catch (error) {
+        console.error('Change password error:', error);
+        showToast(error.message || 'Failed to change password', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Add event listeners for change password form
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('changePasswordForm');
+      if (form) {
+        form.addEventListener('submit', handleChangePasswordSubmit);
+        
+        // Add input event listeners
+        document.getElementById('currentPassword').addEventListener('input', updateSubmitButtonState);
+        document.getElementById('newPassword').addEventListener('input', () => {
+          validatePasswordStrength();
+          if (document.getElementById('confirmPassword').value) {
+            validatePasswordMatch();
+          }
+          updateSubmitButtonState();
+        });
+        document.getElementById('confirmPassword').addEventListener('input', () => {
+          validatePasswordMatch();
+          updateSubmitButtonState();
+        });
+      }
+    });
+
+    function showPhoneVerificationModal() {
+      showToast('Phone verification modal coming soon!', 'info');
+    }
+
+    function showDeleteAccountModal() {
+      if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+        showToast('Account deletion feature coming soon!', 'info');
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+    });
+  </script>
+
+  <!-- Change Password Modal -->
+  <div id="changePasswordModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="text-lg font-semibold text-gray-800">Change Password</h3>
+          <button onclick="closeChangePasswordModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Change Password Form -->
+        <form id="changePasswordForm" class="space-y-4">
+          <!-- Hidden username field for accessibility -->
+          <input type="text" name="username" autocomplete="username" style="display: none;" />
+          <!-- Current Password -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+            <div class="relative">
+              <input type="password" id="currentPassword" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12" placeholder="Enter current password" autocomplete="current-password" required>
+              <button type="button" onclick="togglePasswordVisibility('currentPassword')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- New Password -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+            <div class="relative">
+              <input type="password" id="newPassword" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12" placeholder="Enter new password" autocomplete="new-password" required oninput="validatePasswordStrength()">
+              <button type="button" onclick="togglePasswordVisibility('newPassword')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+            </div>
+            
+            <!-- Password Strength Indicator -->
+            <div class="mt-2">
+              <div class="flex items-center space-x-2 mb-2">
+                <div class="flex-1 bg-gray-200 rounded-full h-2">
+                  <div id="passwordStrengthBar" class="h-2 rounded-full transition-all duration-300 bg-red-500" style="width: 0%"></div>
+                </div>
+                <span id="passwordStrengthText" class="text-xs font-medium text-gray-500">Weak</span>
+              </div>
+              <div id="passwordRequirements" class="space-y-1 text-xs text-gray-500">
+                <div id="req-length" class="flex items-center space-x-2">
+                  <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">•</span>
+                  <span>At least 12 characters</span>
+                </div>
+                <div id="req-uppercase" class="flex items-center space-x-2">
+                  <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">•</span>
+                  <span>One uppercase letter</span>
+                </div>
+                <div id="req-lowercase" class="flex items-center space-x-2">
+                  <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">•</span>
+                  <span>One lowercase letter</span>
+                </div>
+                <div id="req-number" class="flex items-center space-x-2">
+                  <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">•</span>
+                  <span>One number</span>
+                </div>
+                <div id="req-special" class="flex items-center space-x-2">
+                  <span class="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs">•</span>
+                  <span>One special character</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Confirm Password -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+            <div class="relative">
+              <input type="password" id="confirmPassword" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12" placeholder="Confirm new password" autocomplete="new-password" required oninput="validatePasswordMatch()">
+              <button type="button" onclick="togglePasswordVisibility('confirmPassword')" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="passwordMatchMessage" class="mt-1 text-xs text-red-500 hidden">Passwords do not match</div>
+          </div>
+
+          <!-- Security Tips -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+              <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div>
+                <p class="text-sm font-medium text-blue-800 mb-1">Security Tips</p>
+                <ul class="text-xs text-blue-700 space-y-1">
+                  <li>• Use a unique password that you don't use elsewhere</li>
+                  <li>• Consider using a password manager</li>
+                  <li>• Avoid personal information in passwords</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex gap-3 pt-4">
+            <button type="button" onclick="closeChangePasswordModal()" class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors">
+              Cancel
+            </button>
+            <button type="submit" id="changePasswordBtn" class="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors" disabled>
+              Change Password
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

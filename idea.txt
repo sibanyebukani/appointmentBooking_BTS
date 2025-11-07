@@ -1,0 +1,5 @@
+# ✅ **1. Appointment & Booking PWA (Start Here)**
+
+**Why #1:** Fastest to ship. Universal demand: barbers, salons, tutors, clinics, mechanics, consultants.
+**Core features:** Calendar, bookings, reminders, payments.
+**Revenue:** R49–R199 p/m per business.

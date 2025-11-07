@@ -1,0 +1,10 @@
+  While all frontend features are complete, these need backend implementation:
+
+  1. reCAPTCHA Verification - Backend must verify token
+  2. Real Rate Limiting - Server-side throttling
+  3. 2FA/MFA System - SMS/TOTP codes
+  4. Email Verification - Send verification emails
+  5. Password Breach Check - HaveIBeenPwned API
+  6. Session Management - Track active sessions
+  7. Account Lockout - Temporary locks after failures
+  8. Security Logging - Audit trail of login attempts
